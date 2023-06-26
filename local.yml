@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+      args:
+        - ARCH
+    image: django-lazy-srcset_local_django
+    container_name: django-lazy-srcset-local-django
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+      - ./.envs/.local/.shypypi
+    ports:
+      - "8000:8000"
+    command: "python3 manage.py runserver 0.0.0.0:8000"
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: django-lazy-srcset_production_postgres
+    container_name: django-lazy-srcset-local-postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./postgres_backups:/backups
+    env_file:
+      - ./.envs/.local/.postgres

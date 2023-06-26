@@ -1,0 +1,6 @@
+# General
+# ------------------------------------------------------------------------------
+USE_DOCKER=yes
+IPYTHONDIR=/app/.ipython
+PYTHONPATH=/app:/app/django_lazy_srcset:/app/example
+DATABASE_URL=postgres://devuser:devpw@postgres/django_lazy_srcset

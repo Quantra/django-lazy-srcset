@@ -1,0 +1,15 @@
+-r requirements.txt
+
+pylint
+django-debug-toolbar
+pytest
+pytest-sugar
+pytest-django
+pytest-factoryboy
+pytest-lazy-fixture
+coverage
+django-coverage-plugin
+pytest-cov
+faker
+django-environ
+psycopg2-binary
