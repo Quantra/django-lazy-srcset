@@ -102,13 +102,13 @@ def srcset(*args, **kwargs):
     The first arg must be an ImageField or subclass or a path to an image discoverable by static files.
 
     args can provide image sizes in vw for each breakpoint, if not provided 100vw is assumed.  These are integers
-    which are used to calculate generated image sizes.  They must be in vw.  Sorry no calc() etc allowed.
+    which are used to calculate generated image sizes.  They must be in vw.  Sorry no calc() etc. allowed.  Don't try
+    too hard here! Close is good enough.
 
-    kwargs can be used to provide this and breakpoints to use
+    kwargs can be used to provide this and breakpoints to use.
 
-    A kwarg with the key format can be used to set the output format for generated images
-
-    If the first arg is a key from LAZY_SRCSET_BREAKPOINTS this will be used otherwise the default will be used.
+    If the second arg is a key from ``settings.LAZY_SRCSET`` this will be used otherwise the default config will be
+    used.
 
     Example usage (where image is a file-like e.g. ImageField or a string representing a path to a static file):
 
@@ -124,9 +124,11 @@ def srcset(*args, **kwargs):
 
     {% srcset image "custom_breakpoints" 25 50 quality=50 %}
 
+    {% srcset image "custom_breakpoints" 25 50 max_width=1920 quality=50 %}
+
     {% srcset image 1920=25 1024=50 %}
 
-    {% srcset image 1920=25 1024=50 max_width=2560 quality=50 %}
+    {% srcset image 1920=25 1024=50 max_width=1920 quality=50 %}
 
     """
     args = list(args)
