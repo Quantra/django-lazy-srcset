@@ -6,6 +6,7 @@ class LazySrcsetSettings:
     Lazy settings are the best settings.  These can be defined in the project settings and LazySrcsetSettings will
     return settings from django.conf.settings when possible, that inlcudes any setting not defined here too.
     """
+
     LAZY_SRCSET_GENERATOR_ID = "lazy_srcset:srcset_image"
     LAZY_SRCSET = {
         "default": {

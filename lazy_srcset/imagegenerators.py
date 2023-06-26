@@ -7,6 +7,7 @@ class SrcsetImage(ImageSpec):
     imagekit <3 custom generator for converting, compressing and proportionally resizing images to the given width.
     https://django-imagekit.readthedocs.io/en/latest/advanced_usage.html#specs-that-change
     """
+
     def __init__(self, width=None, output_format=None, quality=None, **kwargs):
         self.format = output_format
         self.processors = [ResizeToFit(width)]
