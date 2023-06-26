@@ -6,7 +6,7 @@ Lazy srcset and image generation for Django. Minimum effort required. No databas
 
 Django Lazy srcset will create all the markup and images you need to provide responsive images via the srcset attribute.  All you need to do is install it, configure your breakpoints and use the ``{% srcset %}`` template tag.
 
-All of the hard work (image generation and cacheing) is done by django-imagekit, by default this means images are generated just in time - lazily. Please see the `django-imagekit docs<https://django-imagekit.readthedocs.io>`_ for more info and configuration options.
+All of the hard work (image generation and cacheing) is done by django-imagekit, by default this means images are generated just in time - lazily. Please see the `django-imagekit docs <https://django-imagekit.readthedocs.io>`_ for more info and configuration options.
 
 SVG images are supported, they will not be converted or resized but width and height attributes are still generated.
 
@@ -60,16 +60,16 @@ Use the ``{% srcset %}`` template tag:
     {# image is probably an ImageField #}
     <img {% srcset image %} alt="Lovely and lazy" />
 
-    {# You can also provide relative image widths e.g. 4 - 3 - 2 - 1 col #}
-    <img {% srcset image 25 33 50%}  />
+    {# You can also provide relative image widths e.g. for a 4 - 3 - 2 - 1 col degradation: #}
+    <img {% srcset image 25 33 50 %}  />
 
     {# You can provide a path to a static file #}
     <img {% srcset 'path/to/my/image.png' %} />
 
 Whilst not required it is advisable to take a nap at this stage.
 
-For further documentation and usage examples please read the source code for  ``lazy_srcset/templatetags/lazy_srcset.py``.
+For further documentation and usage examples please read the source code for  `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py#L98>`_.
 
-Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can use ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using django-content-blocks this happens on publish anyway.
+Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using django-content-blocks this happens on publish anyway.
 
 Clean up of unused files created by django-lazy-srcset is down to you, if you require it at all.
