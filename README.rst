@@ -24,7 +24,6 @@ Install with pip:
 Add ``"imagekit"`` and ``"lazy_srcset"`` to ``INSTALLED_APPS``:
 
 .. code-block:: python
-    :caption: settings.py
 
     INSTALLED_APPS = [
         ...
@@ -36,7 +35,6 @@ Add ``"imagekit"`` and ``"lazy_srcset"`` to ``INSTALLED_APPS``:
 Configure your breakpoints and stuff:
 
 .. code-block:: python
-    :caption: settings.py
 
     LAZY_SRCSET = {
         "default": {

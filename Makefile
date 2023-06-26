@@ -54,7 +54,7 @@ dist: clean  ## builds source and wheel package
 # todo when tests exist add coverage to dependencies here as well as dist
 # todo consider automating commit, tag and push?
 release: dist  ## package and upload a release, to make a new release first update the version number in setup.cfg
-	twine upload --config-file .pypirc --repository shy dist/*
+	twine upload --config-file .pypirc dist/*
 	@echo "Package published to pypi! Now commit changes and push."
 
 backupdb: docker_up ## Backup the db to postgres_backups dir

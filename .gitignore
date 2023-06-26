@@ -329,3 +329,5 @@ morello_apps/media/
 .pypirc
 .shypypi
 /postgres_data
+/dist
+/django_lazy_srcset.egg-info
