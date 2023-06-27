@@ -43,8 +43,8 @@ def output_html():
 
     template_tag_params = [
         [["image-file", "image"], ["image-static", "image.filename"]],
-        [None, ["relative-widths-50-33", "50 33"]],
-        [None, ["breakpoints-widths-1234=56-789=10", "1234=56 789=10"]],
+        [None, ["relative-widths-33-50", "33 50"]],
+        [None, ["breakpoints-widths-1234=56-789=90", "1234=56 789=90"]],
         [None, ["custom-config-custom", 'config="custom"']],
         [None, ["quality-50", "quality=50"]],
         [None, ["max-width-800", "max_width=800"]],
