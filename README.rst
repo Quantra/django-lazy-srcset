@@ -1,3 +1,15 @@
+|package version|
+|license|
+|pypi status|
+|coverage|
+
+|python versions supported|
+|django versions supported|
+
+|code style black|
+|pypi downloads|
+|github stars|
+
 ==================
 Django Lazy srcset
 ==================
@@ -73,3 +85,41 @@ Due to the awesomeness of imagekit it's possible to configure django-lazy-srcset
 Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using `django-content-blocks <https://github.com/Quantra/django-content-blocks>`_ this happens on publish anyway.
 
 Clean up of unused files created by django-lazy-srcset is down to you, if you require it at all.
+
+.. shields.io badges
+
+.. |package version| image:: https://img.shields.io/pypi/v/django-lazy-srcset
+    :alt: PyPI Package Version
+    :target: https://pypi.python.org/pypi/django-lazy-srcset/
+
+.. |python versions supported| image:: https://img.shields.io/pypi/pyversions/django-lazy-srcset
+    :alt: Python Versions Supported
+    :target: https://pypi.python.org/pypi/django-lazy-srcset/
+
+.. |django versions supported| image:: https://img.shields.io/pypi/frameworkversions/django/django-lazy-srcset
+    :alt: Django Versions Supported
+    :target: https://pypi.python.org/pypi/django-lazy-srcset/
+
+.. |coverage| image:: https://img.shields.io/badge/dynamic/xml?color=success&label=coverage&query=round%28%2F%2Fcoverage%2F%40line-rate%20%2A%20100%29&suffix=%25&url=https%3A%2F%2Fraw.githubusercontent.com%2FQuantra%2Fdjango-lazy-srcset%2Fmaster%2Fcoverage.xml
+    :alt: Test Coverage
+    :target: https://github.com/Quantra/django-lazy-srcset/blob/master/coverage.xml
+
+.. |code style black| image:: https://img.shields.io/badge/code%20style-black-black
+    :alt: Code Style Black
+    :target: https://github.com/psf/black
+
+.. |license| image:: https://img.shields.io/github/license/Quantra/django-lazy-srcset
+    :alt: MIT License
+    :target: https://github.com/Quantra/django-lazy-srcset/blob/master/LICENSE
+
+.. |github stars| image:: https://img.shields.io/github/stars/Quantra/django-lazy-srcset?style=social
+    :alt: GitHub Repo Stars
+    :target: https://github.com/Quantra/django-lazy-srcset/stargazers
+
+.. |pypi downloads| image:: https://img.shields.io/pypi/dm/django-lazy-srcset
+    :alt: PyPI Downloads
+    :target: https://pypi.python.org/pypi/django-lazy-srcset/
+
+.. |pypi status| image:: https://img.shields.io/pypi/status/django-lazy-srcset
+    :alt: PyPI Status
+    :target: https://pypi.python.org/pypi/django-lazy-srcset/
