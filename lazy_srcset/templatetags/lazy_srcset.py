@@ -101,34 +101,37 @@ def srcset(*args, **kwargs):
 
     The first arg must be an ImageField or subclass or a path to an image discoverable by static files.
 
-    args can provide image sizes in vw for each breakpoint, if not provided 100vw is assumed.  These are integers
-    which are used to calculate generated image sizes.  They must be in vw.  Sorry no calc() etc. allowed.  Don't try
-    too hard here! Close is good enough.
+    args can provide relative image sizes in vw for each breakpoint, if not provided 100vw is assumed.  These are
+    integers which are used to calculate generated image sizes.  They must be in vw.  Sorry no calc() etc. allowed.
+    Don't try too hard here! Close is good enough.
 
-    kwargs can be used to provide this and breakpoints to use.
+    kwargs can be used to provide breakpoints and the relative width for each breakpoint directly (ignoring the
+    config breakpoints and args if you set them for some reason).
 
-    If the second arg is a key from ``settings.LAZY_SRCSET`` this will be used otherwise the default config will be
-    used.
+    The config with the key ``default`` is used unless you provide the config kwarg to specify another config to use.
+
+    You can use the ``max_width`` and ``qualtiy`` kwargs to override the config on a per-use basis.
 
     Example usage (where image is a file-like e.g. ImageField or a string representing a path to a static file):
 
-    {% srcset image %}
+    <img {% srcset image %} />
 
-    {% srcset image 25 50 %}
+    <img {% srcset image 25 50 %} />
 
-    {% srcset image 25 50 quality=50 %}
+    <img {% srcset image 25 50 quality=50 %} />
 
-    {% srcset image "custom_breakpoints" %}
+    <img {% srcset image config="custom_breakpoints" %} />
 
-    {% srcset image "custom_breakpoints" 25 50 %}
+    <img {% srcset image 25 50 config="custom_breakpoints" %} />
 
-    {% srcset image "custom_breakpoints" 25 50 quality=50 %}
+    <img {% srcset image 25 50 config="custom_breakpoints" quality=50 %} />
 
-    {% srcset image "custom_breakpoints" 25 50 max_width=1920 quality=50 %}
+    <img {% srcset image 25 50 config="custom_breakpoints" max_width=1920 quality=50 %} />
 
-    {% srcset image 1920=25 1024=50 %}
+    <img {% srcset image 1920=25 1024=50 %} />
 
-    {% srcset image 1920=25 1024=50 max_width=1920 quality=50 %}
+    <img {% srcset image 1920=25 1024=50 max_width=1920 quality=50 %} />
+
 
     """
     args = list(args)
@@ -147,9 +150,8 @@ def srcset(*args, **kwargs):
 
     # Get the conf from the first arg or default
     try:
-        conf = settings.LAZY_SRCSET[args[0]]
-        args.pop(0)
-    except (KeyError, IndexError):
+        conf = settings.LAZY_SRCSET[kwargs.pop("config")]
+    except KeyError:
         conf = settings.LAZY_SRCSET["default"]
 
     # Get the max_width from kwargs or conf.
