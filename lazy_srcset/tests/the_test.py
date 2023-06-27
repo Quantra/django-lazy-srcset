@@ -6,10 +6,9 @@ from example.example_app.views import output_files_list, output_html
 
 
 def test():
-    example_dir = settings.BASE_DIR / "example"
-    output_dir = example_dir / "images/output"
+    output_dir = settings.BASE_DIR / "example" / "images" / "output"
 
-    tests_dir = example_dir / "example_app/tests"
+    tests_dir = settings.BASE_DIR / "lazy_srcset" / "tests"
     expected_html_file = tests_dir / "expected_html.html"
     expected_files_file = tests_dir / "expected_files.txt"
 

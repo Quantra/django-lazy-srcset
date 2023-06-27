@@ -11,7 +11,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        tests_dir = settings.BASE_DIR / "example/example_app/tests"
+        tests_dir = settings.BASE_DIR / "lazy_srcset" / "tests"
 
         expected_html_file = tests_dir / "expected_html.html"
         expected_html_file.write_text(output_html())
