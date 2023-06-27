@@ -1,5 +1,0 @@
-{% load lazy_srcset %}
-{% for image in images %}
-  <img {% srcset image %} />
-  <img {% srcset image 25 33 50 %} />
-{% endfor %}

@@ -1,4 +1,5 @@
 import math
+import re
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -64,6 +65,10 @@ def get_svg_dimensions(svg_file):
                 _, _, width, height = viewbox.split(" ")
             except (AttributeError, ValueError):
                 pass
+
+        # These could include units eg px or pt so strip them out.
+        width = re.sub("\\D", "", width) if width is not None else None
+        height = re.sub("\\D", "", height) if height is not None else None
 
     return width, height
 

@@ -331,3 +331,4 @@ morello_apps/media/
 /postgres_data
 /dist
 /django_lazy_srcset.egg-info
+example/images/output
