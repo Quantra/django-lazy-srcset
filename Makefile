@@ -13,8 +13,12 @@ help:
 # ------- Commands ---------------------------------------
 # --------------------------------------------------------
 
-coverage:  ## runs pytest and outputs coverage to coverage.xml
-	pytest --cov imperium --cov-report xml
+ARCH?=arm64v8
+docker_arch: ## set the arch environment variable for docker
+	@export ARCH=$(ARCH)
+
+coverage: docker_arch  ## runs pytest and outputs coverage to coverage.xml
+	docker-compose -f local.yml exec django pytest --cov lazy_srcset --cov-report xml
 
 clean: clean-test clean-build clean-pyc  ## remove all build, test, coverage and Python artifacts
 
@@ -43,8 +47,7 @@ dist: clean  ## builds source and wheel package
 	python3 -m build
 
 # Note .pypirc is an untracked file containing secrets for auth with pypi.org
-# todo when tests exist add coverage to dependencies here as well as dist
 # todo consider automating commit, tag and push?
-release: dist  ## package and upload a release, to make a new release first update the version number in setup.cfg
+release: coverage dist  ## package and upload a release, to make a new release first update the version number in setup.cfg
 	twine upload --config-file .pypirc dist/*
 	@echo "Package published to pypi! Now commit changes and push."
