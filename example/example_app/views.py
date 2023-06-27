@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from django.template import Context, Template
 
 
-class TheImageFile(ImageFile):
+class DummyImageField(ImageFile):
     """
     An ImageFile with an url attribute. Should be close enough to what you get when using a models.ImageField
     """
@@ -21,7 +21,7 @@ class TheImageFile(ImageFile):
         return f"{settings.MEDIA_URL }{self.filename}"
 
 
-def the_html():
+def output_html():
     """
     This will create a template to render using all combinations of the params supplied.
     Then it will render that template with all images in the example/images directory.
@@ -33,8 +33,8 @@ def the_html():
     images_dir = settings.MEDIA_ROOT
     image_suffixes = [".webp", ".png", ".jpg", ".jpeg", ".svg"]
     images = [
-        TheImageFile(open(i, "rb"))
-        for i in images_dir.iterdir()
+        DummyImageField(open(i, "rb"))
+        for i in sorted(images_dir.iterdir())
         if i.is_file() and i.suffix.lower() in image_suffixes
     ]
 
@@ -68,11 +68,11 @@ def output_files_list():
     output_dir = settings.BASE_DIR / "example/images/output"
     files = [
         f.name
-        for f in output_dir.iterdir()
+        for f in sorted(output_dir.iterdir())
         if f.is_file() and not f.name.startswith(".")
     ]
     return "\n".join(files)
 
 
 def the_view(request):
-    return HttpResponse(the_html())
+    return HttpResponse(output_html())

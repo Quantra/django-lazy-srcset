@@ -2,7 +2,7 @@ import os
 
 from django.conf import settings
 
-from example.example_app.views import output_files_list, the_html
+from example.example_app.views import output_files_list, output_html
 
 
 def test():
@@ -24,8 +24,8 @@ def test():
     # Assert the output dir is empty
     assert not any(output_dir.iterdir())
 
-    # Assert the_html matches the expected html - this will also generate images
-    assert the_html() == expected_html
+    # Assert output_html matches the expected html - this will also generate images
+    assert output_html() == expected_html
 
     # Assert the files created matches the expected files
     assert output_files_list() == expected_files
@@ -40,7 +40,7 @@ def test():
             break
 
     # Go again
-    the_html()
+    output_html()
 
     # Assert the file wasn't recreated
     assert os.path.getmtime(like_one_file) == create_date

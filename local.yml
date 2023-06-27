@@ -16,3 +16,13 @@ services:
     ports:
       - "8000:8000"
     command: "python3 manage.py runserver 0.0.0.0:8000"
+
+  tox:
+    build:
+      context: .
+      dockerfile: ./compose/local/tox/Dockerfile
+    env_file:
+      - ./.envs/.local/.django
+    volumes:
+      - .:/home/runner:z
+    command: tox

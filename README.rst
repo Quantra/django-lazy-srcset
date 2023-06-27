@@ -8,7 +8,7 @@ Django Lazy srcset will create all the markup and images you need to provide res
 
 All of the hard work (image generation and cacheing) is done by django-imagekit, by default this means images are generated just in time - lazily. Please see the `django-imagekit docs <https://django-imagekit.readthedocs.io>`_ for more info and configuration options.
 
-SVG images are supported, they will not be converted or resized but width and height attributes are still generated.
+SVG images are supported, they will not be converted or resized but width and height attributes are still added as well as the ``role="img"`` attribute.
 
 You will also need Django and Pillow.
 
@@ -66,7 +66,9 @@ Use the ``{% srcset %}`` template tag:
 
 Whilst not required it is advisable to take a nap at this stage.
 
-For further documentation and usage examples please read the docstrings in the source code for  `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py#L98>`_.
+For further documentation and usage examples please read the docstrings in the source code for  `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py>`_.
+
+Due to the awesomeness of imagekit it's possible to configure django-lazy-srcset to use any image generator you have registered on a per config basis. Take a look at `lazy_srcset/conf.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/conf.py>`_ to see how to change the ``generator_id`` setting. For an example image generator look at `lazy_srcset/imagegenerators.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/imagegenerators.py>`_. This is completely optional.
 
 Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using `django-content-blocks <https://github.com/Quantra/django-content-blocks>`_ this happens on publish anyway.
 
