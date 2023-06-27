@@ -45,6 +45,15 @@ MEDIA_ROOT = BASE_DIR / "example" / "images"
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [str(MEDIA_ROOT)]
 
+LAZY_SRCSET = {
+    "default": {
+        "breakpoints": [1920, 1580, 1280, 1024, 640],
+        "max_width": 2560,
+        "quality": 91,
+    },
+    "custom": {"breakpoints": [1280, 640], "max_width": 1920, "quality": 91},
+}
+
 IMAGEKIT_CACHEFILE_DIR = "output"
 IMAGEKIT_SPEC_CACHEFILE_NAMER = "imagekit.cachefiles.namers.source_name_dot_hash"
 

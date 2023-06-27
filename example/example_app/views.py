@@ -21,12 +21,14 @@ class TheImageFile(ImageFile):
         return f"{settings.MEDIA_URL }{self.filename}"
 
 
-def the_view(request):
+def the_html():
     """
-    This view is for testing.  It will create a template to render using all combinations of the params supplied.
-    Then it will render that template with all images in the images directory.
+    This will create a template to render using all combinations of the params supplied.
+    Then it will render that template with all images in the example/images directory.
     We can then compare the output and contents of the images/output directory to some expected output in our test.
     We can also visit / in our browser to view the result.
+
+    It's going to create a lot of images if they don't exist yet so be a little patient.
     """
     images_dir = settings.MEDIA_ROOT
     image_suffixes = [".webp", ".png", ".jpg", ".jpeg", ".svg"]
@@ -59,6 +61,18 @@ def the_view(request):
 
     template = Template(template)
     context = Context({"images": images})
-    html = template.render(context)
+    return template.render(context)
 
-    return HttpResponse(html)
+
+def output_files_list():
+    output_dir = settings.BASE_DIR / "example/images/output"
+    files = [
+        f.name
+        for f in output_dir.iterdir()
+        if f.is_file() and not f.name.startswith(".")
+    ]
+    return "\n".join(files)
+
+
+def the_view(request):
+    return HttpResponse(the_html())
