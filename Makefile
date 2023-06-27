@@ -13,14 +13,6 @@ help:
 # ------- Commands ---------------------------------------
 # --------------------------------------------------------
 
-ARCH?=amd64
-docker_arch: ## set the arch environment variable for docker
-	@export ARCH=$(ARCH)
-
-docker_up: docker_arch ## runs docker compose up and waits for postgres to be ready
-	docker-compose -f local.yml up -d django
-	docker-compose -f local.yml exec django /entrypoint
-
 coverage:  ## runs pytest and outputs coverage to coverage.xml
 	pytest --cov imperium --cov-report xml
 
@@ -56,12 +48,3 @@ dist: clean  ## builds source and wheel package
 release: dist  ## package and upload a release, to make a new release first update the version number in setup.cfg
 	twine upload --config-file .pypirc dist/*
 	@echo "Package published to pypi! Now commit changes and push."
-
-backupdb: docker_up ## Backup the db to postgres_backups dir
-	docker-compose -f local.yml exec postgres backup
-
-FILENAME?=$(shell ls -at postgres_backups/*.sql.gz | head -n1 | xargs basename)
-restoredb: docker_up ## Restore the latest backup or defined FILENAME in postgres_backups
-	docker-compose -f local.yml stop django
-	docker-compose -f local.yml exec postgres restore $(FILENAME)
-	docker-compose -f local.yml start django

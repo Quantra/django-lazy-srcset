@@ -66,8 +66,8 @@ Use the ``{% srcset %}`` template tag:
 
 Whilst not required it is advisable to take a nap at this stage.
 
-For further documentation and usage examples please read the source code for  `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py#L98>`_.
+For further documentation and usage examples please read the docstrings in the source code for  `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py#L98>`_.
 
-Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using django-content-blocks this happens on publish anyway.
+Currently imagekit ``SourceGroup`` has not been implemented therefore the imagekit ``generateimages`` management command will not generate images for django-lazy-srcset. If you want to pre-generate images you can ``render_to_string()`` your templates in an appropriate save method or signal.  If you are using `django-content-blocks <https://github.com/Quantra/django-content-blocks>`_ this happens on publish anyway.
 
 Clean up of unused files created by django-lazy-srcset is down to you, if you require it at all.

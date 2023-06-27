@@ -11,5 +11,3 @@ coverage
 django-coverage-plugin
 pytest-cov
 faker
-django-environ
-psycopg2-binary
