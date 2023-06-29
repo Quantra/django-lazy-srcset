@@ -1,3 +1,4 @@
 include README.rst
 prune example
 prune manage.py
+prune lazy_srcset/tests
