@@ -1,0 +1,3 @@
+[run]
+omit = management/*
+include = lazy_srcset/*
