@@ -17,7 +17,10 @@ ARCH?=arm64v8
 docker_arch: ## set the arch environment variable for docker
 	@export ARCH=$(ARCH)
 
-coverage: docker_arch  ## runs pytest and outputs coverage to coverage.xml
+docker_up: docker_arch ## runs docker compose up
+	docker-compose -f local.yml up -d django
+
+coverage: docker_up  ## runs pytest and outputs coverage to coverage.xml
 	docker-compose -f local.yml exec django pytest --cov lazy_srcset --cov-report xml
 
 clean: clean-test clean-build clean-pyc  ## remove all build, test, coverage and Python artifacts
