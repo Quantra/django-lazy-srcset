@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.management import BaseCommand
 
-from example.example_app.views import output_files_list, output_html
+from lazy_srcset.tests.the_test import output_files_list, output_html
 
 
 class Command(BaseCommand):

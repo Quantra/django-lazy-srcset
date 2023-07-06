@@ -153,7 +153,7 @@ def srcset(*args, **kwargs):
     if Path(image.name).suffix.lower() == ".svg":
         return svg_srcset(image)
 
-    # Get the conf from the first arg or default
+    # Get the conf from the config kwarg or default
     try:
         conf = settings.LAZY_SRCSET[kwargs.pop("config")]
     except KeyError:
@@ -164,7 +164,7 @@ def srcset(*args, **kwargs):
 
     # Set the maximum width image in our srcset.
     if max_width is None or max_width > image.width:
-        # Clamp max_width to image.width or use image.width if max_width is None.
+        # Limit max_width to image.width or use image.width if max_width is None.
         max_width = image.width
 
     # Get the format and quality from kwargs or conf and wrap up together with source in generator_kwargs.
@@ -188,8 +188,8 @@ def srcset(*args, **kwargs):
     generator_image = ImageCacheFile(generator)
 
     # Set the max_width image as our src and include it in the srcset.
-    src = generator_image.url
-    srcset = [FORMAT_STRINGS["srcset_entry"] % (generator_image.url, max_width)]
+    src_value = generator_image.url
+    srcset_values = [FORMAT_STRINGS["srcset_entry"] % (generator_image.url, max_width)]
 
     # Set the width and height from the max_width image.
     width, height = generator_image.width, generator_image.height
@@ -222,15 +222,15 @@ def srcset(*args, **kwargs):
         generator_image = ImageCacheFile(generator)
 
         # Add an entry for this image to the srcset.
-        srcset.append(
+        srcset_values.append(
             FORMAT_STRINGS["srcset_entry"] % (generator_image.url, target_width)
         )
 
     # Create the attrs list for imminent stringification.
     attrs = [
-        FORMAT_STRINGS["src"] % src,
-        FORMAT_STRINGS["srcset"] % ", ".join(srcset),
-        FORMAT_STRINGS["sizes"] % ", ".join(sizes),
+        FORMAT_STRINGS["src"] % src_value,
+        FORMAT_STRINGS["srcset"] % ", ".join(srcset_values),
+        FORMAT_STRINGS["sizes"] % ", ".join(reversed(sizes)),
         FORMAT_STRINGS["width"] % width,
         FORMAT_STRINGS["height"] % height,
     ]
