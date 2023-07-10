@@ -49,6 +49,7 @@ def output_html():
         [None, ["custom-config-custom", 'config="custom"']],
         [None, ["quality-50", "quality=50"]],
         [None, ["max-width-800", "max_width=800"]],
+        [None, ["default_size-50", "default_size=50"]],
     ]
     template_tag_params = itertools.product(*template_tag_params)
 

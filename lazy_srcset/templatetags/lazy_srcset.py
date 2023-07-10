@@ -133,25 +133,26 @@ def srcset(*args, **kwargs):
 
     Example usage (where image is a file-like e.g. ImageField or a string representing a path to a static file):
 
+    <!-- All sizes assumed to be 100vw -->
     <img {% srcset image %} />
 
+    <!-- First break point 25vw second break point 50vw all others 100vw -->
     <img {% srcset image 25 50 %} />
 
-    <img {% srcset image 25 50 quality=50 %} />
-
-    <img {% srcset image config="custom_breakpoints" %} />
-
-    <img {% srcset image 25 50 config="custom_breakpoints" %} />
-
-    <img {% srcset image 25 50 config="custom_breakpoints" quality=50 %} />
-
-    <img {% srcset image 25 50 config="custom_breakpoints" max_width=1920 quality=50 %} />
-
+    <!-- Define breakpoints and sizes as kwargs (any sizes set as args are ignored + config is ignored) -->
     <img {% srcset image 1920=25 1024=50 %} />
 
-    <img {% srcset image 1920=25 1024=50 max_width=1920 quality=50 %} />
+    <!-- Use the config "custom_breakpoints" instead of "default" -->
+    <img {% srcset image config="custom_breakpoints" %} />
 
+    <!-- Specify max_width as a kwarg -->
+    <img {% srcset image max_width=1920 %} />
 
+    <!-- Specify image quality as a kwarg -->
+    <img {% srcset image quality=50 %} />
+
+    <!-- Specify default size as a kwarg (otherwise it is assumed to be the same as the biggest breakpoint) -->
+    <img {% srcset image default_size=50 %} />
     """
     args = list(args)
 
@@ -176,6 +177,12 @@ def srcset(*args, **kwargs):
         conf = settings.LAZY_SRCSET[kwargs.pop("config")]
     except KeyError:
         conf = settings.LAZY_SRCSET["default"]
+
+    # Get the default size from kwargs
+    try:
+        default_size = kwargs.pop("default_size")
+    except KeyError:
+        default_size = None
 
     # Get the max_width from kwargs or conf.
     max_width = get_from_kwargs_or_conf("max_width", kwargs, conf)
@@ -220,7 +227,8 @@ def srcset(*args, **kwargs):
     )
 
     # Set the default size to match our relative width for the biggest breakpoint.
-    sizes = [FORMAT_STRINGS["size"] % sizes_dict[max(sizes_dict.keys())]]
+    default_size = default_size or sizes_dict[max(sizes_dict.keys())]
+    sizes = [FORMAT_STRINGS["size"] % default_size]
 
     # Loop through the sizes_dict to create the sizes and srcset attrs and generate the scaled images.
     for breakpoint_width, relative_width in sizes_dict.items():
