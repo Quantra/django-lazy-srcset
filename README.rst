@@ -48,10 +48,16 @@ Configure your breakpoints and stuff:
 
 .. code-block:: python
 
-    # Lazy srcset is disabled when DEBUG = True by default. Only set this if you want to alter that behaviour.
-    LAZY_SRCSET_ENABLED = not DEBUG
+    # When disabled src, width and height attributes are returned so images still work but no srcset or image
+    # generation will happen. By default, lazy-srcset is disabled when debug is True.
+    LAZY_SRCSET_ENABLED = not django_settings.DEBUG
 
-    # Multiple configurations can be set and used. This is the default.
+    # The default threshold to use when not specified in the config.
+    LAZY_SRCSET_THRESHOLD = 69
+
+    # The default generator to use when not specified in the config.
+    LAZY_SRCSET_GENERATOR_ID = "lazy_srcset:srcset_image"
+
     LAZY_SRCSET = {
         "default": {
             # breakpoints is the only setting you must define
@@ -62,6 +68,11 @@ Configure your breakpoints and stuff:
             "quality": 91,
             # If format is not provided the source image format is used
             "format": "WEBP",
+            # The difference in width (px) required to generate a new image
+            # This prevents images being created which are too similar in size
+            "threshold": LAZY_SRCSET_THRESHOLD,
+            # If generator_id is not provided LAZY_SRCSET_GENERATOR_ID is used
+            "generator_id": LAZY_SRCSET_GENERATOR_ID,
         }
     }
 

@@ -15,13 +15,25 @@ from lazy_srcset.conf import settings
 
 register = template.Library()
 
-# Format strings for attrs and parts of attrs.
-FORMAT_STRINGS = {
-    attr: f'{attr}="%s"' for attr in ["src", "width", "height", "srcset", "sizes"]
-}
-FORMAT_STRINGS["srcset_entry"] = "%s %iw"
-FORMAT_STRINGS["sizes_entry"] = "(max-width: %ipx) %ivw"
-FORMAT_STRINGS["size"] = "%ivw"
+
+class FormatStrings:
+    """
+    Format strings for attrs and parts of attrs.
+    """
+
+    srcset_entry = "%s %iw"
+    sizes_entry = "(max-width: %ipx) %ivw"
+    size = "%ivw"
+
+    # These get set in init.
+    src = width = height = srcset = sizes = None
+
+    def __init__(self):
+        for attr in ["src", "width", "height", "srcset", "sizes"]:
+            setattr(self, attr, f'{attr}="%s"')
+
+
+format_strings = FormatStrings()
 
 
 def lists_to_dict(keys, values, default_value=100):
@@ -79,9 +91,9 @@ def image_src(image):
     Used when LAZY_SRCSET_ENABLED = False
     """
     attrs = [
-        FORMAT_STRINGS["src"] % image.url,
-        FORMAT_STRINGS["width"] % image.width,
-        FORMAT_STRINGS["height"] % image.height,
+        format_strings.src % image.url,
+        format_strings.width % image.width,
+        format_strings.height % image.height,
     ]
 
     return mark_safe(" ".join(attrs))
@@ -92,7 +104,7 @@ def svg_srcset(svg):
     Returns attrs string containing src and width and height if possible. Will also add role="img" attr.
     """
     # SVG only needs a src attribute, role="img" help screen readers to correctly announce the SVG as an image.
-    attrs = [FORMAT_STRINGS["src"] % svg.url, 'role="img"']
+    attrs = [format_strings.src % svg.url, 'role="img"']
 
     # Try getting width and height from attrs.
     try:
@@ -107,8 +119,9 @@ def svg_srcset(svg):
 
     # Add width and height to our attrs if we have them.
     if width is not None and height is not None:
-        attrs += [FORMAT_STRINGS["width"] % width, FORMAT_STRINGS["height"] % height]
+        attrs += [format_strings.width % width, format_strings.height % height]
 
+    # todo replace with format_html https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.html.format_html
     # Stringification!
     return mark_safe(" ".join(attrs))
 
@@ -129,7 +142,10 @@ def srcset(*args, **kwargs):
 
     The config with the key ``default`` is used unless you provide the config kwarg to specify another config to use.
 
-    You can use the ``max_width`` and ``qualtiy`` kwargs to override the config on a per-use basis.
+    You can use the ``max_width`` and ``quality`` kwargs to override the config on a per-use basis.
+
+    The default size (for any resolution above the biggest breakpoint) is set to the same as the biggest breakpoint
+    by default. If you need to set the default size to something else use the ``default_size`` kwarg.
 
     Example usage (where image is a file-like e.g. ImageField or a string representing a path to a static file):
 
@@ -214,7 +230,7 @@ def srcset(*args, **kwargs):
 
     # Set the max_width image as our src and include it in the srcset.
     src_value = generator_image.url
-    srcset_values = [FORMAT_STRINGS["srcset_entry"] % (generator_image.url, max_width)]
+    srcset_values = [format_strings.srcset_entry % (generator_image.url, max_width)]
 
     # Set the width and height from the max_width image.
     width, height = generator_image.width, generator_image.height
@@ -225,16 +241,23 @@ def srcset(*args, **kwargs):
         if kwargs
         else lists_to_dict(conf["breakpoints"], args)
     )
+    # sizes_dict = kwargs or lists_to_dict(conf["breakpoints"], args)
+
+    # The sizes in our dict are strings and might contain px|vw
 
     # Set the default size to match our relative width for the biggest breakpoint.
+    # todo this might be in px so sanitize the output
     default_size = default_size or sizes_dict[max(sizes_dict.keys())]
-    sizes = [FORMAT_STRINGS["size"] % default_size]
+    sizes = [format_strings.size % default_size]
 
     # Loop through the sizes_dict to create the sizes and srcset attrs and generate the scaled images.
+    # todo need to do a 2 pass, first to collect sizes and second to generate images
+    #   after the first pass the sizes should be reduced by removing any which are too similar in size
     for breakpoint_width, relative_width in sizes_dict.items():
         # Add an entry for this breakpoint to sizes.
-        sizes.append(FORMAT_STRINGS["sizes_entry"] % (breakpoint_width, relative_width))
+        sizes.append(format_strings.sizes_entry % (breakpoint_width, relative_width))
 
+        # todo this bit needs to change
         # Calculate the target width for this breakpoint with some quick maths.
         target_width = math.ceil(breakpoint_width * relative_width / 100)
         if target_width >= max_width:
@@ -249,16 +272,17 @@ def srcset(*args, **kwargs):
 
         # Add an entry for this image to the srcset.
         srcset_values.append(
-            FORMAT_STRINGS["srcset_entry"] % (generator_image.url, target_width)
+            format_strings.srcset_entry % (generator_image.url, target_width)
         )
 
+    # todo replace with format_html https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.html.format_html
     # Create the attrs list for imminent stringification.
     attrs = [
-        FORMAT_STRINGS["src"] % src_value,
-        FORMAT_STRINGS["srcset"] % ", ".join(srcset_values),
-        FORMAT_STRINGS["sizes"] % ", ".join(reversed(sizes)),
-        FORMAT_STRINGS["width"] % width,
-        FORMAT_STRINGS["height"] % height,
+        format_strings.src % src_value,
+        format_strings.srcset % ", ".join(srcset_values),
+        format_strings.sizes % ", ".join(reversed(sizes)),
+        format_strings.width % width,
+        format_strings.height % height,
     ]
 
     # Stringify!
