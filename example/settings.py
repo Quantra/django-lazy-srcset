@@ -45,6 +45,7 @@ MEDIA_ROOT = BASE_DIR / "example" / "images"
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [str(MEDIA_ROOT)]
 
+LAZY_SRCSET_ENABLED = True
 LAZY_SRCSET = {
     "default": {
         "breakpoints": [1920, 1580, 1280, 1024, 640],

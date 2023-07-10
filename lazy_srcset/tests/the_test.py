@@ -2,6 +2,7 @@ import itertools
 import os
 from pathlib import Path
 
+import pytest
 from django.conf import settings
 from django.core.files.images import ImageFile
 from django.template import Context, Template
@@ -74,18 +75,27 @@ def output_files_list():
     return "\n".join(files)
 
 
-def test_lazy_srcset():
+@pytest.mark.parametrize(
+    "enabled,html_file,files_file",
+    [
+        [True, "expected_html.html", "expected_files.txt"],
+        [False, "expected_html_disabled.html", "expected_files_disabled.txt"],
+    ],
+)
+def test_lazy_srcset(settings, enabled, html_file, files_file):
     """
     One test that will run through all combinations of params and check the template tag output matches the
     expected output in the expected_html.html file.  It will also generate all the images and check they also match
     the expected out.  The test will expect the test images to be present in the MEDIA_ROOT directory as per the
     example project.
     """
+    settings.LAZY_SRCSET_ENABLED = enabled
+
     output_dir = settings.MEDIA_ROOT / settings.IMAGEKIT_CACHEFILE_DIR
 
     tests_dir = Path(__file__).parent
-    expected_html_file = tests_dir / "expected_html.html"
-    expected_files_file = tests_dir / "expected_files.txt"
+    expected_html_file = tests_dir / html_file
+    expected_files_file = tests_dir / files_file
 
     expected_html = expected_html_file.read_text()
     expected_files = expected_files_file.read_text()
@@ -113,11 +123,12 @@ def test_lazy_srcset():
             create_date = os.path.getmtime(like_one_file)
             break
 
-    # Go again
-    output_html()
+    if enabled:
+        # Go again
+        output_html()
 
-    # Assert the file wasn't recreated
-    assert os.path.getmtime(like_one_file) == create_date
+        # Assert the file wasn't recreated
+        assert os.path.getmtime(like_one_file) == create_date
 
-    # Assert the list of files hasn't changed
-    assert output_files_list() == expected_files
+        # Assert the list of files hasn't changed
+        assert output_files_list() == expected_files

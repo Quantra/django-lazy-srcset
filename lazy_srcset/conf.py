@@ -7,7 +7,11 @@ class LazySrcsetSettings:
     return settings from django.conf.settings when possible, that inlcudes any setting not defined here too.
     """
 
+    # When disabled src, width and height attributes are returned so images still work but no srcset or image
+    # generation will happen. By default, lazy-srcset is disabled when debug is True.
+    LAZY_SRCSET_ENABLED = not django_settings.DEBUG
     LAZY_SRCSET_GENERATOR_ID = "lazy_srcset:srcset_image"
+
     LAZY_SRCSET = {
         "default": {
             # breakpoints is the only setting you must define

@@ -73,23 +73,37 @@ def get_svg_dimensions(svg_file):
     return width, height
 
 
-def svg_srcset(svg_file):
+def image_src(image):
+    """
+    Returns attrs string containing src and width and height if possible.
+    Used when LAZY_SRCSET_ENABLED = False
+    """
+    attrs = [
+        FORMAT_STRINGS["src"] % image.url,
+        FORMAT_STRINGS["width"] % image.width,
+        FORMAT_STRINGS["height"] % image.height,
+    ]
+
+    return mark_safe(" ".join(attrs))
+
+
+def svg_srcset(svg):
     """
     Returns attrs string containing src and width and height if possible. Will also add role="img" attr.
     """
     # SVG only needs a src attribute, role="img" help screen readers to correctly announce the SVG as an image.
-    attrs = [FORMAT_STRINGS["src"] % svg_file.url, 'role="img"']
+    attrs = [FORMAT_STRINGS["src"] % svg.url, 'role="img"']
 
     # Try getting width and height from attrs.
     try:
-        width = svg_file.width
-        height = svg_file.height
+        width = svg.width
+        height = svg.height
     except AttributeError:
         width, height = None, None
 
     # If we don't have the width and height try getting it from the SVG file.
     if width is None or height is None:
-        width, height = get_svg_dimensions(svg_file)
+        width, height = get_svg_dimensions(svg)
 
     # Add width and height to our attrs if we have them.
     if width is not None and height is not None:
@@ -152,6 +166,10 @@ def srcset(*args, **kwargs):
     # If the image is an SVG return now with src="whatever.svg" and width and height if possible. SVG is lazy king!
     if Path(image.name).suffix.lower() == ".svg":
         return svg_srcset(image)
+
+    # If LAZY_SRCSET_ENABLED = False return src, width and height
+    if not settings.LAZY_SRCSET_ENABLED:
+        return image_src(image)
 
     # Get the conf from the config kwarg or default
     try:

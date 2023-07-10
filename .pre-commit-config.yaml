@@ -1,4 +1,4 @@
-exclude: '^docs/|/migrations/|expected_files.txt|expected_html.html'
+exclude: '^docs/|/migrations/|expected_files.*|expected_html.*'
 default_stages: [commit]
 
 repos:

@@ -18,3 +18,10 @@ class Command(BaseCommand):
 
         expected_files_file = tests_dir / "expected_files.txt"
         expected_files_file.write_text(output_files_list())
+
+        settings.LAZY_SRCSET_ENABLED = False
+        expected_html_file_disabled = tests_dir / "expected_html_disabled.html"
+        expected_html_file_disabled.write_text(output_html())
+
+        expected_files_file_disabled = tests_dir / "expected_files_disabled.txt"
+        expected_files_file_disabled.write_text("")
