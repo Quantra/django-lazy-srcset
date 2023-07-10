@@ -17,6 +17,7 @@ class LazySrcsetSettings:
     # The default generator to use when not specified in the config.
     LAZY_SRCSET_GENERATOR_ID = "lazy_srcset:srcset_image"
 
+    # Configs
     LAZY_SRCSET = {
         "default": {
             # breakpoints is the only setting you must define

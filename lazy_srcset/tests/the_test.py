@@ -44,12 +44,28 @@ def output_html():
 
     template_tag_params = [
         [["image-file", "image"], ["image-static", "image.filename"]],
-        [None, ["relative-widths-33-50", "33 50"]],
-        [None, ["breakpoints-widths-1234=56-789=90", "1234=56 789=90"]],
-        [None, ["custom-config-custom", 'config="custom"']],
+        [
+            None,
+            ["relative-widths-33-50", "33 50"],
+            ["fixed-widths-33-50", "'233px' '150px'"],
+            ["mixed-widths", "'233px' '50vw'"],
+        ],
+        [
+            None,
+            ["breakpoints-widths-1234=56-789=90", "1234=56 789=90"],
+            ["breakpoints-widths-fixed-1234=56px-789=90px", "1234='56px' 789='90px'"],
+            ["breakpoints-widths-mixed-1234=56vw-789=90px", "1234='56vw' 789='90px'"],
+        ],
+        [None, ["custom-config-custom", "config='custom'"]],
         [None, ["quality-50", "quality=50"]],
         [None, ["max-width-800", "max_width=800"]],
-        [None, ["default_size-50", "default_size=50"]],
+        [
+            None,
+            ["default_size-50", "default_size=50"],
+            ["default_size-500px", "default_size='500px'"],
+            ["default_size-75vw", "default_size='75vw'"],
+        ],
+        [None, ["threshold-123", "threshold=123"]],
     ]
     template_tag_params = itertools.product(*template_tag_params)
 

@@ -7,6 +7,7 @@ from django import template
 from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.files.images import ImageFile
+from django.template.exceptions import TemplateSyntaxError
 from django.utils.safestring import mark_safe
 from imagekit.cachefiles import ImageCacheFile
 from imagekit.registry import generator_registry
@@ -22,8 +23,8 @@ class FormatStrings:
     """
 
     srcset_entry = "%s %iw"
-    sizes_entry = "(max-width: %ipx) %ivw"
-    size = "%ivw"
+    sizes_entry = "(max-width: %ipx) %i%s"
+    size = "%i%s"  # <value><units>
 
     # These get set in init.
     src = width = height = srcset = sizes = None
@@ -85,11 +86,51 @@ def get_svg_dimensions(svg_file):
     return width, height
 
 
+def sanitize_breakpoint(breakpoint):
+    """
+    Breakpoints must be integers.
+    """
+    try:
+        return int(breakpoint)
+    except ValueError:
+        raise TemplateSyntaxError(
+            "Invalid breakpoint: %s\nBreakpoints must be integers." % breakpoint
+        )
+
+
+def sanitize_size(size):
+    """
+    Sizes need to be either an integer or a string with px or vw units.
+    """
+    try:
+        return int(size), "vw"
+    except ValueError:
+        pass
+
+    try:
+        size, units = int(size[:-2]), size[-2:]
+    except IndexError:
+        raise TemplateSyntaxError(
+            "Invalid size: %s\nBreakpoints must be integers.\nSizes must specify vw or px units or be integers."
+            % size
+        )
+
+    if units not in ["px", "vw"]:
+        raise TemplateSyntaxError("Invalid size: %s\nUnits must be px or vw." % size)
+
+    return size, units
+
+
+def sanitize_sizes_dict(sizes_dict):
+    return {sanitize_breakpoint(k): sanitize_size(v) for k, v in sizes_dict.items()}
+
+
 def image_src(image):
     """
     Returns attrs string containing src and width and height if possible.
     Used when LAZY_SRCSET_ENABLED = False
     """
+    # todo replace with format_html
     attrs = [
         format_strings.src % image.url,
         format_strings.width % image.width,
@@ -167,9 +208,13 @@ def srcset(*args, **kwargs):
     <!-- Specify image quality as a kwarg -->
     <img {% srcset image quality=50 %} />
 
+    <!-- Specify threshold as a kwarg -->
+    <img {% srcset image threshold=100 %} />
+
     <!-- Specify default size as a kwarg (otherwise it is assumed to be the same as the biggest breakpoint) -->
     <img {% srcset image default_size=50 %} />
     """
+    # INIT
     args = list(args)
 
     # If the image has an open method we should be good to go.  If not assume it's a string and get it from
@@ -203,86 +248,97 @@ def srcset(*args, **kwargs):
     # Get the max_width from kwargs or conf.
     max_width = get_from_kwargs_or_conf("max_width", kwargs, conf)
 
+    # Get the kwargs for the image generator
+    output_format = conf.get("format")
+    quality = get_from_kwargs_or_conf("quality", kwargs, conf)
+    generator_id = conf.get("generator_id", settings.LAZY_SRCSET_GENERATOR_ID)
+    threshold = int(
+        get_from_kwargs_or_conf("threshold", kwargs, conf)
+        or settings.LAZY_SRCSET_THRESHOLD
+    )
+
+    # All kwargs except breakpoint kwargs must be popped by now!
+
+    # If we have kwargs we can set the sizes otherwise try and get them from args.
+    sizes_dict = kwargs or lists_to_dict(conf["breakpoints"], args)
+
+    # The sizes in our dict are strings and might contain px|vw
+    # After this our dict will be like: {1920: (50, "vw")}
+    sizes_dict = sanitize_sizes_dict(sizes_dict)
+
+    # Create the sizes for the sizes attr
+    sizes = [
+        format_strings.sizes_entry % (size, *sizes_dict[size])
+        for size in sorted(sizes_dict.keys())
+    ]
+
+    # Add the default size
+    if default_size is not None:
+        sizes.append(format_strings.size % sanitize_size(default_size))
+    else:
+        sizes.append(format_strings.size % sizes_dict[max(sizes_dict.keys())])
+
     # Set the maximum width image in our srcset.
     if max_width is None or max_width > image.width:
         # Limit max_width to image.width or use image.width if max_width is None.
         max_width = image.width
 
-    # Get the format and quality from kwargs or conf and wrap up together with source in generator_kwargs.
-    # These will be used for every image generation.
-    generator_kwargs = {
-        "source": image,
-        "output_format": conf.get("format"),
-        "quality": get_from_kwargs_or_conf("quality", kwargs, conf),
-    }
+    # widths_dict will be a dict with the image width as key and a boolean if the image must be created E.g.
+    # {960: True}
+    widths_dict = {max_width: True}
 
     # Make sure the image file is closed as soon as we can.
     image.close()
 
-    # Big generator!  https://youtu.be/8W_VC_BgMjo
-    generator_id = conf.get("generator_id", settings.LAZY_SRCSET_GENERATOR_ID)
+    # GO!
 
-    # Generate the max_width image via imagekit.
-    generator = generator_registry.get(
-        generator_id, width=max_width, **generator_kwargs
-    )
-    generator_image = ImageCacheFile(generator)
-
-    # Set the max_width image as our src and include it in the srcset.
-    src_value = generator_image.url
-    srcset_values = [format_strings.srcset_entry % (generator_image.url, max_width)]
-
-    # Set the width and height from the max_width image.
-    width, height = generator_image.width, generator_image.height
-
-    # If we have kwargs we can set the sizes otherwise try and get them from args.
-    sizes_dict = (
-        {int(k): int(v) for k, v in kwargs.items()}
-        if kwargs
-        else lists_to_dict(conf["breakpoints"], args)
-    )
-    # sizes_dict = kwargs or lists_to_dict(conf["breakpoints"], args)
-
-    # The sizes in our dict are strings and might contain px|vw
-
-    # Set the default size to match our relative width for the biggest breakpoint.
-    # todo this might be in px so sanitize the output
-    default_size = default_size or sizes_dict[max(sizes_dict.keys())]
-    sizes = [format_strings.size % default_size]
-
-    # Loop through the sizes_dict to create the sizes and srcset attrs and generate the scaled images.
-    # todo need to do a 2 pass, first to collect sizes and second to generate images
-    #   after the first pass the sizes should be reduced by removing any which are too similar in size
-    for breakpoint_width, relative_width in sizes_dict.items():
-        # Add an entry for this breakpoint to sizes.
-        sizes.append(format_strings.sizes_entry % (breakpoint_width, relative_width))
-
-        # todo this bit needs to change
-        # Calculate the target width for this breakpoint with some quick maths.
-        target_width = math.ceil(breakpoint_width * relative_width / 100)
-        if target_width >= max_width:
-            # Don't upscale images, that would require extra effort.
+    # Loop through the sizes_dict to create the widths list used for image generation.
+    for breakpoint_width, (width, units) in sizes_dict.items():
+        if units == "px":
+            # When px units are defined always generate an image with that width
+            widths_dict[width] = True
             continue
+
+        # Calculate the target width for this breakpoint with some quick maths.
+        target_width = math.ceil(breakpoint_width * width / 100)
+        if target_width < max_width:
+            # Don't upscale images, that would require extra effort.
+            widths_dict[target_width] = False
+
+    # Loop through the widths of images and generate what is needed
+    current_width = max_width
+    images = []
+    for width in reversed(sorted(widths_dict.keys())):
+        if not widths_dict[width] and (current_width - width) < threshold:
+            # Only generate required images, images defined with px and images outside our threshold
+            continue
+
+        current_width = width
 
         # Generate the image via imagekit.
         generator = generator_registry.get(
-            generator_id, width=target_width, **generator_kwargs
+            generator_id,
+            width=width,
+            source=image,
+            output_format=output_format,
+            quality=quality,
         )
         generator_image = ImageCacheFile(generator)
+        images.append(generator_image)
 
-        # Add an entry for this image to the srcset.
-        srcset_values.append(
-            format_strings.srcset_entry % (generator_image.url, target_width)
-        )
+    # Create the srcsets
+    srcsets = [
+        format_strings.srcset_entry % (image.url, image.width) for image in images
+    ]
 
     # todo replace with format_html https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.html.format_html
     # Create the attrs list for imminent stringification.
     attrs = [
-        format_strings.src % src_value,
-        format_strings.srcset % ", ".join(srcset_values),
-        format_strings.sizes % ", ".join(reversed(sizes)),
-        format_strings.width % width,
-        format_strings.height % height,
+        format_strings.src % images[0].url,
+        format_strings.srcset % ", ".join(srcsets),
+        format_strings.sizes % ", ".join(sizes),
+        format_strings.width % images[0].width,
+        format_strings.height % images[0].height,
     ]
 
     # Stringify!
