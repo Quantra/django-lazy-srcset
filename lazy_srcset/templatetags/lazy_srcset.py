@@ -89,7 +89,7 @@ def sanitize_size(size):
 
     try:
         size, units = int(size[:-2]), size[-2:]
-    except IndexError:
+    except (IndexError, ValueError):
         raise TemplateSyntaxError(
             "Invalid size: %s\nBreakpoints must be integers.\nSizes must specify vw or px units or be integers."
             % size
@@ -137,7 +137,7 @@ def srcset(*args, **kwargs):
     integers which are used to calculate generated image sizes.  They must have units of vw or px only. If no units
     are supplied then vw is assumed.
 
-    kwargs can be used to provide break points and the relative width for each break point directly (ignoring the
+    kwargs can be used to provide break points and the relative size for each break point directly (ignoring the
     config break points and args if you set them for some reason).
 
     The config with the key ``default`` is used unless you provide the config kwarg to specify another config to use.
@@ -183,8 +183,9 @@ def srcset(*args, **kwargs):
     <!-- You can set the default size with units in the same way as the sizes args -->
     <img {% srcset image default_size='300px' %} />
 
-    <!-- You can mix and match all of the above -->
+    <!-- You can mix and match all of the above E.g. -->
     <img {% srcset image 25 33 50 config='custom_breakpoints' max_width=1920 image_quality=50 threshold=100 %} />
+    <img {% srcset image 1920=25 1024=50 default_size=50 image_quality=50 %} />
     """
     # INIT
     args = list(args)
@@ -269,7 +270,7 @@ def srcset(*args, **kwargs):
 
     # GO!
 
-    # Loop through the sizes_dict to create the widths list used for image generation.
+    # Loop through the sizes_dict to create the widths_dict used for image generation.
     for breakpoint_width, (width, units) in sizes_dict.items():
         if units == "px":
             # When px units are defined always generate an image with that width
@@ -287,7 +288,7 @@ def srcset(*args, **kwargs):
     images = []
     for width in reversed(sorted(widths_dict.keys())):
         if not widths_dict[width] and (current_width - width) < threshold:
-            # Only generate required images, images defined with px and images outside our threshold
+            # Only generate required images and images outside our threshold
             continue
 
         current_width = width
