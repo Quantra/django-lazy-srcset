@@ -8,33 +8,13 @@ from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.core.files.images import ImageFile
 from django.template.exceptions import TemplateSyntaxError
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from imagekit.cachefiles import ImageCacheFile
 from imagekit.registry import generator_registry
 
 from lazy_srcset.conf import settings
 
 register = template.Library()
-
-
-class FormatStrings:
-    """
-    Format strings for attrs and parts of attrs.
-    """
-
-    srcset_entry = "%s %iw"
-    sizes_entry = "(max-width: %ipx) %i%s"
-    size = "%i%s"  # <value><units>
-
-    # These get set in init.
-    src = width = height = srcset = sizes = None
-
-    def __init__(self):
-        for attr in ["src", "width", "height", "srcset", "sizes"]:
-            setattr(self, attr, f'{attr}="%s"')
-
-
-format_strings = FormatStrings()
 
 
 def lists_to_dict(keys, values, default_value=100):
@@ -79,7 +59,7 @@ def get_svg_dimensions(svg_file):
             except (AttributeError, ValueError):
                 pass
 
-        # These could include units eg px or pt so strip them out.
+        # These could include units E.g. px or pt so strip them out.
         width = re.sub("\\D", "", width) if width is not None else None
         height = re.sub("\\D", "", height) if height is not None else None
 
@@ -121,32 +101,10 @@ def sanitize_size(size):
     return size, units
 
 
-def sanitize_sizes_dict(sizes_dict):
-    return {sanitize_breakpoint(k): sanitize_size(v) for k, v in sizes_dict.items()}
-
-
-def image_src(image):
-    """
-    Returns attrs string containing src and width and height if possible.
-    Used when LAZY_SRCSET_ENABLED = False
-    """
-    # todo replace with format_html
-    attrs = [
-        format_strings.src % image.url,
-        format_strings.width % image.width,
-        format_strings.height % image.height,
-    ]
-
-    return mark_safe(" ".join(attrs))
-
-
 def svg_srcset(svg):
     """
     Returns attrs string containing src and width and height if possible. Will also add role="img" attr.
     """
-    # SVG only needs a src attribute, role="img" help screen readers to correctly announce the SVG as an image.
-    attrs = [format_strings.src % svg.url, 'role="img"']
-
     # Try getting width and height from attrs.
     try:
         width = svg.width
@@ -158,13 +116,14 @@ def svg_srcset(svg):
     if width is None or height is None:
         width, height = get_svg_dimensions(svg)
 
-    # Add width and height to our attrs if we have them.
+    # Return with width and height if we have them.
     if width is not None and height is not None:
-        attrs += [format_strings.width % width, format_strings.height % height]
+        return format_html(
+            'src="{}" width="{}" height="{}" role="img"', svg.url, width, height
+        )
 
-    # todo replace with format_html https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.html.format_html
-    # Stringification!
-    return mark_safe(" ".join(attrs))
+    # Return with src only if we don't have width and height
+    return format_html('src="{}" role="img"', svg.url)
 
 
 @register.simple_tag
@@ -174,19 +133,19 @@ def srcset(*args, **kwargs):
 
     The first arg must be an ImageField or subclass or a path to an image discoverable by static files.
 
-    args can provide relative image sizes in vw for each breakpoint, if not provided 100vw is assumed.  These are
-    integers which are used to calculate generated image sizes.  They must be in vw.  Sorry no calc() etc. allowed.
-    Don't try too hard here! Close is good enough.
+    args can provide relative image sizes in vw for each break point, if not provided 100vw is assumed.  These are
+    integers which are used to calculate generated image sizes.  They must have units of vw or px only. If no units
+    are supplied then vw is assumed.
 
-    kwargs can be used to provide breakpoints and the relative width for each breakpoint directly (ignoring the
-    config breakpoints and args if you set them for some reason).
+    kwargs can be used to provide break points and the relative width for each break point directly (ignoring the
+    config break points and args if you set them for some reason).
 
     The config with the key ``default`` is used unless you provide the config kwarg to specify another config to use.
 
-    You can use the ``max_width`` and ``quality`` kwargs to override the config on a per-use basis.
+    You can use the ``max_width``, ``threshold`` and ``quality`` kwargs to override the config on a per-use basis.
 
-    The default size (for any resolution above the biggest breakpoint) is set to the same as the biggest breakpoint
-    by default. If you need to set the default size to something else use the ``default_size`` kwarg.
+    The default size (for any resolution above the biggest break point) is set to the same as the biggest break point
+    by default. If you want to set the default size to something else use the ``default_size`` kwarg.
 
     Example usage (where image is a file-like e.g. ImageField or a string representing a path to a static file):
 
@@ -196,11 +155,18 @@ def srcset(*args, **kwargs):
     <!-- First break point 25vw second break point 50vw all others 100vw -->
     <img {% srcset image 25 50 %} />
 
-    <!-- Define breakpoints and sizes as kwargs (any sizes set as args are ignored + config is ignored) -->
+    <!-- These are all the valid ways to specify sizes as args -->
+    <img {% srcset image 25 '50vw' '300px' %}
+
+    <!-- Define break points and sizes as kwargs -->
+    <!-- Any sizes set as args are ignored + config break points are ignored -->
     <img {% srcset image 1920=25 1024=50 %} />
 
+    <!-- These are all the valid ways to specify break points and sizes as kwargs -->
+    <img {% srcset image 1920=25 1024='50vw' 640='300px' %} />
+
     <!-- Use the config "custom_breakpoints" instead of "default" -->
-    <img {% srcset image config="custom_breakpoints" %} />
+    <img {% srcset image config='custom_breakpoints' %} />
 
     <!-- Specify max_width as a kwarg -->
     <img {% srcset image max_width=1920 %} />
@@ -213,6 +179,12 @@ def srcset(*args, **kwargs):
 
     <!-- Specify default size as a kwarg (otherwise it is assumed to be the same as the biggest breakpoint) -->
     <img {% srcset image default_size=50 %} />
+
+    <!-- You can set the default size with units in the same way as the sizes args -->
+    <img {% srcset image default_size='300px' %} />
+
+    <!-- You can mix and match all of the above -->
+    <img {% srcset image 25 33 50 config='custom_breakpoints' max_width=1920 image_quality=50 threshold=100 %} />
     """
     # INIT
     args = list(args)
@@ -225,13 +197,15 @@ def srcset(*args, **kwargs):
         image = ImageFile(open(finders.find(image), "rb"))
         image.url = url
 
-    # If the image is an SVG return now with src="whatever.svg" and width and height if possible. SVG is lazy king!
+    # If the image is an SVG return now with src, width and height if possible. SVG is lazy king!
     if Path(image.name).suffix.lower() == ".svg":
         return svg_srcset(image)
 
     # If LAZY_SRCSET_ENABLED = False return src, width and height
     if not settings.LAZY_SRCSET_ENABLED:
-        return image_src(image)
+        return format_html(
+            'src="{}" width="{}" height="{}"', image.url, image.width, image.height
+        )
 
     # Get the conf from the config kwarg or default
     try:
@@ -264,19 +238,22 @@ def srcset(*args, **kwargs):
 
     # The sizes in our dict are strings and might contain px|vw
     # After this our dict will be like: {1920: (50, "vw")}
-    sizes_dict = sanitize_sizes_dict(sizes_dict)
+    sizes_dict = {
+        sanitize_breakpoint(k): sanitize_size(v) for k, v in sizes_dict.items()
+    }
 
     # Create the sizes for the sizes attr
     sizes = [
-        format_strings.sizes_entry % (size, *sizes_dict[size])
+        format_html("(max-width: {}px) {}{}", size, *sizes_dict[size])
         for size in sorted(sizes_dict.keys())
     ]
 
     # Add the default size
     if default_size is not None:
-        sizes.append(format_strings.size % sanitize_size(default_size))
+        default_size = sanitize_size(default_size)
     else:
-        sizes.append(format_strings.size % sizes_dict[max(sizes_dict.keys())])
+        default_size = sizes_dict[max(sizes_dict.keys())]
+    sizes.append(format_html("{}{}", *default_size))
 
     # Set the maximum width image in our srcset.
     if max_width is None or max_width > image.width:
@@ -327,19 +304,14 @@ def srcset(*args, **kwargs):
         images.append(generator_image)
 
     # Create the srcsets
-    srcsets = [
-        format_strings.srcset_entry % (image.url, image.width) for image in images
-    ]
-
-    # todo replace with format_html https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.html.format_html
-    # Create the attrs list for imminent stringification.
-    attrs = [
-        format_strings.src % images[0].url,
-        format_strings.srcset % ", ".join(srcsets),
-        format_strings.sizes % ", ".join(sizes),
-        format_strings.width % images[0].width,
-        format_strings.height % images[0].height,
-    ]
+    srcsets = [format_html("{} {}w", image.url, image.width) for image in images]
 
     # Stringify!
-    return mark_safe(" ".join(attrs))
+    return format_html(
+        'src="{}" srcset="{}" sizes="{}" width="{}" height="{}"',
+        images[0].url,
+        ", ".join(srcsets),
+        ", ".join(sizes),
+        images[0].width,
+        images[0].height,
+    )
