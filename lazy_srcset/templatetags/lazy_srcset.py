@@ -30,16 +30,6 @@ def lists_to_dict(keys, values, default_value=100):
     return combined_dict
 
 
-def get_from_kwargs_or_conf(key, kwargs, conf):
-    """
-    Pop the key from kwargs and return if possible. If not get the key from conf and return even if its None.
-    """
-    try:
-        return kwargs.pop(key)
-    except KeyError:
-        return conf.get(key)
-
-
 def get_svg_dimensions(svg_file):
     """
     Try and get width and height from the svg file or return none for them if not possible.
@@ -56,7 +46,7 @@ def get_svg_dimensions(svg_file):
             viewbox = root.get("viewBox")
             try:
                 _, _, width, height = viewbox.split(" ")
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError):  # pragma: no cover
                 pass
 
         # These could include units E.g. px or pt so strip them out.
@@ -72,7 +62,7 @@ def sanitize_breakpoint(breakpoint):
     """
     try:
         return int(breakpoint)
-    except ValueError:
+    except ValueError:  # pragma: no cover
         raise TemplateSyntaxError(
             "Invalid breakpoint: %s\nBreakpoints must be integers." % breakpoint
         )
@@ -87,43 +77,90 @@ def sanitize_size(size):
     except ValueError:
         pass
 
+    size = size.replace(" ", "")
     try:
         size, units = int(size[:-2]), size[-2:]
-    except (IndexError, ValueError):
+    except (IndexError, ValueError):  # pragma: no cover
         raise TemplateSyntaxError(
             "Invalid size: %s\nBreakpoints must be integers.\nSizes must specify vw or px units or be integers."
             % size
         )
 
     if units not in ["px", "vw"]:
-        raise TemplateSyntaxError("Invalid size: %s\nUnits must be px or vw." % size)
+        raise TemplateSyntaxError(
+            "Invalid size: %s\nUnits must be px or vw." % size
+        )  # pragma: no cover
 
     return size, units
 
 
-def svg_srcset(svg):
+def get_config(kwargs):
+    """
+    Pop from kwargs as needed and set up the config dict ready for this run.
+    After running this kwargs will only contain breakpoints if anything.
+    """
+    # Get the conf from the config kwarg or default and copy it so changes don't persist
+    try:
+        conf_key = kwargs.pop("config")
+    except KeyError:
+        conf_key = "default"
+    conf = settings.LAZY_SRCSET[conf_key].copy()
+
+    # Try to pop these from kwargs
+    for key in ["default_size", "max_width", "quality", "threshold"]:
+        try:
+            conf[key] = kwargs.pop(key)
+        except KeyError:
+            pass
+
+    # Set a default from settings
+    conf.setdefault("threshold", settings.LAZY_SRCSET_THRESHOLD)
+    conf.setdefault("generator_id", settings.LAZY_SRCSET_GENERATOR_ID)
+
+    return conf
+
+
+def svg_srcset(source_img):
     """
     Returns attrs string containing src and width and height if possible. Will also add role="img" attr.
     """
     # Try getting width and height from attrs.
     try:
-        width = svg.width
-        height = svg.height
-    except AttributeError:
+        width = source_img.width
+        height = source_img.height
+    except AttributeError:  # pragma: no cover
         width, height = None, None
 
     # If we don't have the width and height try getting it from the SVG file.
     if width is None or height is None:
-        width, height = get_svg_dimensions(svg)
+        width, height = get_svg_dimensions(source_img)
 
     # Return with width and height if we have them.
     if width is not None and height is not None:
-        return format_html(
-            'src="{}" width="{}" height="{}" role="img"', svg.url, width, height
+        html = format_html(
+            'src="{}" width="{}" height="{}" role="img"', source_img.url, width, height
         )
+    else:
+        # Return with src only if we don't have width and height
+        html = format_html('src="{}" role="img"', source_img.url)
 
-    # Return with src only if we don't have width and height
-    return format_html('src="{}" role="img"', svg.url)
+    source_img.close()
+    return html
+
+
+def noop(source_img):
+    """
+    The no-op returns src, width and height so images still work.
+    This is used when LAZY_SRCSET_ENABLED=False and whilst images are being generated.
+    """
+    html = format_html(
+        'src="{}" width="{}" height="{}"',
+        source_img.url,
+        source_img.width,
+        source_img.height,
+    )
+    source_img.close()
+    return html
 
 
 @register.simple_tag
@@ -187,91 +224,54 @@ def srcset(*args, **kwargs):
     <img {% srcset image 25 33 50 config='custom_breakpoints' max_width=1920 image_quality=50 threshold=100 %} />
     <img {% srcset image 1920=25 1024=50 default_size=50 image_quality=50 %} />
     """
-    # INIT
     args = list(args)
 
     # If the image has an open method we should be good to go.  If not assume it's a string and get it from
     # staticfiles wrapped up in ImageFile. Set the url attribute, so we can use it later.
-    image = args.pop(0)
-    if not hasattr(image, "open"):
-        url = staticfiles_storage.url(image)
-        image = ImageFile(open(finders.find(image), "rb"))
-        image.url = url
+    source_img = args.pop(0)
+    if not hasattr(source_img, "open"):
+        url = staticfiles_storage.url(source_img)
+        source_img = ImageFile(open(finders.find(source_img), "rb"))
+        source_img.url = url
 
     # If the image is an SVG return now with src, width and height if possible. SVG is lazy king!
-    if Path(image.name).suffix.lower() == ".svg":
-        return svg_srcset(image)
+    if Path(source_img.name).suffix.lower() == ".svg":
+        return svg_srcset(source_img)
 
     # If LAZY_SRCSET_ENABLED = False return src, width and height
     if not settings.LAZY_SRCSET_ENABLED:
-        return format_html(
-            'src="{}" width="{}" height="{}"', image.url, image.width, image.height
-        )
+        return noop(source_img)
 
-    # Get the conf from the config kwarg or default
-    try:
-        conf = settings.LAZY_SRCSET[kwargs.pop("config")]
-    except KeyError:
-        conf = settings.LAZY_SRCSET["default"]
-
-    # Get the default size from kwargs
-    try:
-        default_size = kwargs.pop("default_size")
-    except KeyError:
-        default_size = None
-
-    # Get the max_width from kwargs or conf.
-    max_width = get_from_kwargs_or_conf("max_width", kwargs, conf)
-
-    # Get the kwargs for the image generator
-    output_format = conf.get("format")
-    quality = get_from_kwargs_or_conf("quality", kwargs, conf)
-    generator_id = conf.get("generator_id", settings.LAZY_SRCSET_GENERATOR_ID)
-    threshold = int(
-        get_from_kwargs_or_conf("threshold", kwargs, conf)
-        or settings.LAZY_SRCSET_THRESHOLD
-    )
-
-    # All kwargs except breakpoint kwargs must be popped by now!
+    # Prepare config, sizes_dict and widths_dict
+    conf = get_config(kwargs)
 
     # If we have kwargs we can set the sizes otherwise try and get them from args.
     sizes_dict = kwargs or lists_to_dict(conf["breakpoints"], args)
 
-    # The sizes in our dict are strings and might contain px|vw
-    # After this our dict will be like: {1920: (50, "vw")}
+    # The sizes in our dict are strings and might contain px|vw. After this our dict will be like: {1920: (50, "vw")}
     sizes_dict = {
         sanitize_breakpoint(k): sanitize_size(v) for k, v in sizes_dict.items()
     }
 
-    # Create the sizes for the sizes attr
-    sizes = [
-        format_html("(max-width: {}px) {}{}", size, *sizes_dict[size])
-        for size in sorted(sizes_dict.keys())
-    ]
-
-    # Add the default size
-    if default_size is not None:
-        default_size = sanitize_size(default_size)
-    else:
-        default_size = sizes_dict[max(sizes_dict.keys())]
-    sizes.append(format_html("{}{}", *default_size))
-
     # Set the maximum width image in our srcset.
-    if max_width is None or max_width > image.width:
+    if conf["max_width"] is None or conf["max_width"] > source_img.width:
         # Limit max_width to image.width or use image.width if max_width is None.
-        max_width = image.width
+        conf["max_width"] = source_img.width
 
-    # widths_dict will be a dict with the image width as key and a boolean if the image must be created E.g.
-    # {960: True}
-    widths_dict = {max_width: True}
+    # widths_dict is a dict with the image width as key and a boolean if the image must be created E.g. {960: True}
+    widths_dict = {conf["max_width"]: True}
 
-    # Make sure the image file is closed as soon as we can.
-    image.close()
+    # Loop through the sizes_dict to create the widths_dict used for image generation.  Create sizes list for the attr
+    sizes = []
+    width, units = "100", "vw"
+    for breakpoint_width in sorted(sizes_dict.keys()):
+        width, units = sizes_dict[breakpoint_width]
 
-    # GO!
+        # Add an entry to sizes
+        sizes.append(
+            format_html("(max-width: {}px) {}{}", breakpoint_width, width, units)
+        )
 
-    # Loop through the sizes_dict to create the widths_dict used for image generation.
-    for breakpoint_width, (width, units) in sizes_dict.items():
         if units == "px":
             # When px units are defined always generate an image with that width
             widths_dict[width] = True
@@ -279,40 +279,53 @@ def srcset(*args, **kwargs):
 
         # Calculate the target width for this breakpoint with some quick maths.
         target_width = math.ceil(breakpoint_width * width / 100)
-        if target_width < max_width:
+        if target_width < conf["max_width"]:
             # Don't upscale images, that would require extra effort.
             widths_dict[target_width] = False
 
+    # Add the default size (sneaky use of the sorted loop above leaves us with the width and units we need)
+    if "default_size" in conf.keys():
+        width, units = sanitize_size(conf["default_size"])
+    sizes.append(format_html("{}{}", width, units))
+
     # Loop through the widths of images and generate what is needed
-    current_width = max_width
-    images = []
+    current_width = conf["max_width"]
+    output_imgs = []
     for width in reversed(sorted(widths_dict.keys())):
-        if not widths_dict[width] and (current_width - width) < threshold:
+        if not widths_dict[width] and (current_width - width) < conf["threshold"]:
             # Only generate required images and images outside our threshold
             continue
 
-        current_width = width
-
         # Generate the image via imagekit.
         generator = generator_registry.get(
-            generator_id,
+            conf["generator_id"],
             width=width,
-            source=image,
-            output_format=output_format,
-            quality=quality,
+            source=source_img,
+            output_format=conf.get("format"),
+            quality=conf["quality"],
         )
         generator_image = ImageCacheFile(generator)
-        images.append(generator_image)
+        output_imgs.append(generator_image)
+
+        current_width = width
 
     # Create the srcsets
-    srcsets = [format_html("{} {}w", image.url, image.width) for image in images]
+    try:
+        srcsets = [
+            format_html("{} {}w", image.url, image.width) for image in output_imgs
+        ]
+    except FileNotFoundError:  # pragma: no cover
+        # Images are being generated in another thread right now, but we can rely on source_img to actually exist
+        return noop(source_img)
+
+    source_img.close()
 
     # Stringify!
     return format_html(
         'src="{}" srcset="{}" sizes="{}" width="{}" height="{}"',
-        images[0].url,
+        output_imgs[0].url,
         ", ".join(srcsets),
         ", ".join(sizes),
-        images[0].width,
-        images[0].height,
+        output_imgs[0].width,
+        output_imgs[0].height,
     )
