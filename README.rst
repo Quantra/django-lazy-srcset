@@ -20,6 +20,8 @@ Django Lazy srcset will create the markup and generate the images you need to pr
 
 All of the hard work (image generation and cacheing) is done by django-imagekit, by default this means images are generated just in time - lazily. Please see the `django-imagekit docs <https://django-imagekit.readthedocs.io>`_ for more info and configuration options.
 
+Width and height attributes are generated to help avoid layout shifts. Make sure you set these in CSS so they are only used by the browser for aspect ratio.
+
 SVG images are supported, they will not be converted or resized but width and height attributes are still added as well as the ``role="img"`` attribute.
 
 You will also need Django and Pillow.
@@ -62,7 +64,8 @@ Configure your breakpoints and stuff (most/all of this is optional):
         "default": {
             # breakpoints is the only setting you must define
             "breakpoints": [1920, 1580, 1280, 1024, 640],
-            # If max_width is not provided the source image width is used, it's a good idea to set this
+            # If max_width is not provided the source image width is used.
+            # It's a good idea to set this.
             "max_width": 2560,
             # If quality is not provided PIL will choose a default
             "quality": 91,
@@ -82,18 +85,37 @@ Use the ``{% srcset %}`` template tag:
 
     {% load lazy_srcset %}
 
-    {# image is probably an ImageField #}
+    {# image is an ImageField. With no args or kwargs provided all sizes are assumed to be 100vw #}
     <img {% srcset image %} alt="Lovely and lazy" />
 
-    {# You can also provide relative image widths e.g. for a 4 - 3 - 2 - 1 col degradation: #}
+    {# You can provide a path to a static file instead of an ImageField. #}
+    <img {% srcset 'path/to/my/image.png' %} />
+
+    {# You can provide relative (vw) image widths e.g. for a 4 - 3 - 2 - 1 col degradation #}
+    {# These are used to calculate the width of the generated images for each breakpoint #}
     <img {% srcset image 25 33 50 %}  />
 
-    {# You can provide a path to a static file #}
-    <img {% srcset 'path/to/my/image.png' %} />
+    {# Kwargs can be used to define breakpoints and some settings #}
+    <img {% srcset image 1920=25 1580=33 1024=50 640=100 max_width=1920 %} />
+
+    {# Fixed width images can be defined with px units. These are always made regardless of threshold #}
+    <img {% srcset image '500px' '400px' '300px' %} />
 
 Whilst not required it is advisable to take a nap at this stage.
 
 For further documentation and examples of all the options please see the huge and obvious docstring in the source code for `lazy_srcset/templatetags/lazy_srcset.py <https://github.com/Quantra/django-lazy-srcset/blob/master/lazy_srcset/templatetags/lazy_srcset.py>`_.
+
+How it Works
+------------
+
+If the source image is wider than the ``max_width`` it is resized to ``max_width``. Otherwise it is converted as is. This image is then used in the srcset and src attributes.
+
+For each breakpoint we calculate the target width of the image required and iterate from biggest to smallest. Images are then generated if the required width is:
+
+* Smaller than the source width (no upscaling!).
+* Smaller than the previously generated image by more than ``threshold`` px unless the size was defined with px units.
+
+Once imagekit has generated an image it won't create it again and it will store this fact in the cache to further speed up subsequent renders.
 
 Advanced
 --------
