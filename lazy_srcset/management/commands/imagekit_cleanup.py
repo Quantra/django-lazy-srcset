@@ -13,7 +13,6 @@ import re
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib.staticfiles import finders
 from django.core.cache import caches
 from django.core.files.storage import get_storage_class
 from django.core.management import BaseCommand
@@ -25,8 +24,27 @@ class Command(BaseCommand):
         "clean up the imagekit files.  Suggest running once per day."
     )
     storage = None
+    static_storage = None
     root_path = None
     cache = None
+
+    def file_exists(self, path, file):
+        """
+        Check the storage and static storage for the file.
+        The file can have a different extension.
+        """
+        file_stem = Path(file).stem
+        for storage in [self.storage, self.static_storage]:
+            try:
+                directories, files = storage.listdir(path)
+            except FileNotFoundError:
+                continue
+
+            for f in files:
+                if Path(f).stem == file_stem:
+                    return True
+
+        return False
 
     def process_file(self, file, path):
         """
@@ -34,32 +52,33 @@ class Command(BaseCommand):
         """
         source_path = path.relative_to(self.root_path)
         source_file = re.sub(r"\.[a-z0-9]+\.", ".", file)  # noqa
-        source_filepath = source_path / source_file
 
-        if not self.storage.exists(source_filepath) and not finders.find(
-            source_filepath
-        ):
-            cache_key = f"{settings.IMAGEKIT_CACHE_PREFIX}{file}-state"
+        if not self.file_exists(source_path, source_file):
+            filepath = path / file
+
+            cache_key = f"{settings.IMAGEKIT_CACHE_PREFIX}{filepath.relative_to(self.root_path.parent)}-state"
             self.cache.delete(cache_key)
 
-            filepath = path / file
             self.storage.delete(filepath)
             self.stdout.write(f"Deleted: {filepath}")
 
-    def process_directory(self, directories, files, path):
+    def process_directory(self, path):
         """
         Recursively walk through directories.
         """
+        directories, files = self.storage.listdir(path)
+
         for file in files:
             self.process_file(file, path)
 
         for directory in directories:
-            path = path / directory
-            self.process_directory(*self.storage.listdir(path), path)
+            next_path = path / directory
+
+            self.process_directory(next_path)
 
             # Delete empty dirs
-            if not any(self.storage.listdir(path)):
-                self.storage.delete(path)
+            if not any(self.storage.listdir(next_path)):
+                self.storage.delete(next_path)
 
     def handle(self, *args, **options):
         """
@@ -77,6 +96,7 @@ class Command(BaseCommand):
             return
 
         self.storage = get_storage_class(settings.IMAGEKIT_DEFAULT_FILE_STORAGE)()
+        self.static_storage = get_storage_class(settings.STATICFILES_STORAGE)()
         self.cache = caches[settings.IMAGEKIT_CACHE_BACKEND]
 
         try:
@@ -86,4 +106,4 @@ class Command(BaseCommand):
 
         self.root_path = path / settings.IMAGEKIT_CACHEFILE_DIR
 
-        self.process_directory(*self.storage.listdir(self.root_path), self.root_path)
+        self.process_directory(self.root_path)
