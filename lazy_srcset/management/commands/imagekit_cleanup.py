@@ -51,7 +51,7 @@ class Command(BaseCommand):
         Delete images that no longer have a source.
         """
         source_path = path.relative_to(self.root_path)
-        source_file = re.sub(r"\.[a-z0-9]+\.", ".", file)  # noqa
+        source_file = re.sub(r"\.[^\.]+\.([^\.]+$)", ".\1", file)  # noqa
 
         if not self.file_exists(source_path, source_file):
             filepath = path / file
