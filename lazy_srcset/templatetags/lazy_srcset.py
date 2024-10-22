@@ -50,8 +50,8 @@ def get_svg_dimensions(svg_file):
                 pass
 
         # These could include units E.g. px or pt so strip them out.
-        width = re.sub("\\D", "", width) if width is not None else None
-        height = re.sub("\\D", "", height) if height is not None else None
+        width = re.sub(r"[^\d.]", "", width) if width is not None else None
+        height = re.sub(r"[^\d.]", "", height) if height is not None else None
 
     return width, height
 
