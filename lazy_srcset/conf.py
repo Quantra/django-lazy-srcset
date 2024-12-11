@@ -4,12 +4,15 @@ from django.conf import settings as django_settings
 class LazySrcsetSettings:
     """
     Lazy settings are the best settings.  These can be defined in the project settings and LazySrcsetSettings will
-    return settings from django.conf.settings when possible, that inlcudes any setting not defined here too.
+    return settings from django.conf.settings when possible, that includes any setting not defined here too.
     """
 
     # When disabled src, width and height attributes are returned so images still work but no srcset or image
     # generation will happen. By default, lazy-srcset is disabled when debug is True.
     LAZY_SRCSET_ENABLED = not django_settings.DEBUG
+
+    # List of file extensions that should be ignored (case-insensitive)
+    LAZY_SRCSET_IGNORED_EXTENSIONS = [".gif"]
 
     # The default threshold to use when not specified in the config.
     LAZY_SRCSET_THRESHOLD = 69

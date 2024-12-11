@@ -331,3 +331,5 @@ morello_apps/media/
 /dist
 /django_lazy_srcset.egg-info
 example/images/output
+/.codebuddy
+/.idea/codebuddy.xml

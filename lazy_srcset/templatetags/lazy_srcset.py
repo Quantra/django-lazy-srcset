@@ -196,7 +196,7 @@ def srcset(*args, **kwargs):
     <img {% srcset image 25 '50vw' '300px' %}
 
     <!-- Define break points and sizes as kwargs -->
-    <!-- Any sizes set as args are ignored + config break points are ignored -->
+    <!-- Any sizes set as args are ignored and config break points are ignored -->
     <img {% srcset image 1920=25 1024=50 %} />
 
     <!-- These are all the valid ways to specify break points and sizes as kwargs -->
@@ -234,8 +234,16 @@ def srcset(*args, **kwargs):
         source_img = ImageFile(open(finders.find(source_img), "rb"))
         source_img.url = url
 
+    file_extension = Path(source_img.name).suffix.lower()
+
+    # Check if the file extension should be ignored
+    if file_extension in [
+        ext.lower() for ext in settings.LAZY_SRCSET_IGNORED_EXTENSIONS
+    ]:
+        return noop(source_img)
+
     # If the image is an SVG return now with src, width and height if possible. SVG is lazy king!
-    if Path(source_img.name).suffix.lower() == ".svg":
+    if file_extension == ".svg":
         return svg_srcset(source_img)
 
     # If LAZY_SRCSET_ENABLED = False return src, width and height
